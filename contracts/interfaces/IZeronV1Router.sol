@@ -6,7 +6,8 @@ pragma experimental ABIEncoderV2;
 interface IZeronV1Router {
     event ArbitralChanged(address arbitral);
     event CommisionTokenChanged(address token, bool isSupport);
-    event FeeChanged(uint256 fee);
+    event FeeChanged(uint256 oldFee, uint256 newFee);
+    event NewPayment(address paymentAddr);
     event OwnerChanged(address oldOwner, address newOwner);
 
     function arbitral() external view returns (address);
@@ -15,9 +16,9 @@ interface IZeronV1Router {
         address _employee,
         uint256 _amount,
         string memory _task,
-        uint256 _duration,
+        uint256 _deadline,
         address _commisionToken
-    ) external returns (address);
+    ) external;
 
     function getAllZeronPayments() external view returns (address[] memory);
 

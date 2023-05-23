@@ -42,6 +42,8 @@ interface IZeronV1Arbitral {
         returns (
             address plaintiff,
             address defendant,
+            string memory plaintiffEvidence,
+            string memory defendantEvidence,
             address zeronPaymentAddr,
             address commisionTokenAddr,
             uint256 disputeCreatedAt,
@@ -49,13 +51,25 @@ interface IZeronV1Arbitral {
             uint256 fee,
             uint256 numberOfVotes,
             uint8 status,
-            ZeronArbitral.VoteCounter memory voteCounter
+            ZeronV1Arbitral.VoteCounter memory voteCounter
         );
+
+    function getAllZeronDisputes() external view returns (bytes32[] memory);
 
     function getDetailOfDispute(bytes32 _disputeId)
         external
         view
-        returns (ZeronArbitral.Dispute memory);
+        returns (ZeronV1Arbitral.Dispute memory);
+
+    function getZeronDisputesByDefendant(address _defendant)
+        external
+        view
+        returns (bytes32[] memory);
+
+    function getZeronDisputesByPlaintiff(address _plaintiff)
+        external
+        view
+        returns (bytes32[] memory);
 
     function minStake() external view returns (uint256);
 
@@ -81,6 +95,9 @@ interface IZeronV1Arbitral {
         uint256 _amount,
         uint256 _fee
     ) external payable returns (bytes32 disputeId);
+
+    function submitDisputeEvidence(bytes32 _disputeId, string memory _evidence)
+        external;
 
     function totalStakingRewardsSupply() external view returns (uint256);
 
@@ -113,7 +130,7 @@ interface IZeronV1Arbitral {
     function zntToken() external view returns (address);
 }
 
-interface ZeronArbitral {
+interface ZeronV1Arbitral {
     struct VoteCounter {
         uint256 inSupport;
         uint256 inOpposition;
@@ -122,6 +139,8 @@ interface ZeronArbitral {
     struct Dispute {
         address plaintiff;
         address defendant;
+        string plaintiffEvidence;
+        string defendantEvidence;
         address zeronPaymentAddr;
         address commisionTokenAddr;
         address[] attWit;

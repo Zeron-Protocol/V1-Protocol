@@ -4,8 +4,8 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IZeronV1Arbitral.sol";
-import "./interfaces/IZeronV1Payments.sol";
 import "./ZeronV1Payments.sol";
+
 
 contract ZeronV1Router {
     address public owner;
@@ -17,7 +17,8 @@ contract ZeronV1Router {
     mapping(address => address[]) private zeronPaymentsByEmployer;
     mapping(address => address[]) private zeronPaymentsByEmployee;
 
-    event FeeChanged(uint fee);
+    event FeeChanged(uint oldFee, uint newFee);
+    event NewPayment(address paymentAddr);
     event CommisionTokenChanged(address token, bool isSupport);
     event ArbitralChanged(address arbitral);
     event OwnerChanged(address oldOwner, address newOwner);
@@ -40,13 +41,13 @@ contract ZeronV1Router {
     }
     
 
-    function createZeronPayments(address _employee, uint256 _amount, string memory _task, uint _duration, address _commisionToken) external unLock returns (address) {
+    function createZeronPayments(address _employee, uint256 _amount, string memory _task, uint _deadline, address _commisionToken) external unLock {
         require(msg.sender != _employee, "Invalid employee address");
         require(_employee != address(0), "Invalid employee address");
         require(supportCommissionTokens[_commisionToken], "Invalid commission token");
         require(_amount > 0, "Commission should be greater than 0");
-        require(_duration > 0, "Duration should be greater than 0");
-        ZeronV1Payments zeronPayment = new ZeronV1Payments(arbitral, msg.sender, _employee, _amount, _task, _duration, _commisionToken, serviceFee);
+        require(_deadline > block.timestamp , "Duration should be greater than CreatedAt");
+        ZeronV1Payments zeronPayment = new ZeronV1Payments(arbitral, msg.sender, _employee, _amount, _task, _deadline, _commisionToken, serviceFee);
         address paymentAddr = address(zeronPayment);
         allZeronPayments.push(paymentAddr);
         zeronPaymentsByEmployer[msg.sender].push(paymentAddr);
@@ -60,7 +61,7 @@ contract ZeronV1Router {
         commisionToken.transferFrom(msg.sender, paymentAddr, _amount);
 
         IZeronV1Arbitral(arbitral).addPayments(paymentAddr);
-        return paymentAddr;
+        emit NewPayment(paymentAddr);
     }
 
 
@@ -80,8 +81,8 @@ contract ZeronV1Router {
 
 
     function setOwner(address _owner) external onlyOwner {
-        owner = _owner;
         emit OwnerChanged(owner, _owner);
+        owner = _owner;
     }
 
 
@@ -92,8 +93,8 @@ contract ZeronV1Router {
 
 
     function setFees(uint24 _fee) external onlyOwner {
+        emit FeeChanged(serviceFee, _fee);
         serviceFee = _fee;
-        emit FeeChanged(_fee);
     }
 
 

@@ -31,6 +31,8 @@ contract ZeronV1Arbitral {
     struct Dispute {
         address payable plaintiff;
         address payable defendant;
+        string plaintiffEvidence;
+        string defendantEvidence;
         address zeronPaymentAddr;
         address commisionTokenAddr;
         address[] attWit;
@@ -50,9 +52,12 @@ contract ZeronV1Arbitral {
     uint public minStake;
     uint24 public stakingRate;
     bool public unLocked;
+    bytes32[] private allZeronDisputes;
     mapping (address => bool) public zeronPayments;
     mapping (address => Witness) public witnesses;
     mapping (bytes32 => Dispute) public disputes;
+    mapping (address => bytes32[]) private zeronDisputesByDefendant;
+    mapping (address => bytes32[]) private zeronDisputesByPlaintiff;
     mapping (bytes32 => mapping(address => VoteStatus)) private witnessesVoteStatus;
     mapping (address => mapping(address => uint)) public attendanceRewards;
 
@@ -173,6 +178,8 @@ contract ZeronV1Arbitral {
             {
                 plaintiff: _plaintiff,
                 defendant: _defendant,
+                plaintiffEvidence: '',
+                defendantEvidence: '',
                 commisionTokenAddr: _commisionTokenAddr,
                 zeronPaymentAddr: msg.sender,
                 attWit: new address[](0),
@@ -187,9 +194,38 @@ contract ZeronV1Arbitral {
                 })
             }
         );
-        
+        allZeronDisputes.push(disputeId);
+        zeronDisputesByPlaintiff[_plaintiff].push(disputeId);
+        zeronDisputesByDefendant[_defendant].push(disputeId);
+
         emit DisputeFiled(disputeId, _plaintiff, _defendant, msg.sender, _amount);
         return disputeId;
+    }
+
+
+    function submitDisputeEvidence(bytes32 _disputeId, string memory _evidence) external unLock {
+        Dispute storage dispute = disputes[_disputeId];
+        require(msg.sender == dispute.plaintiff || msg.sender == dispute.defendant, "Forbidden");
+        if (msg.sender == dispute.plaintiff) {
+            dispute.plaintiffEvidence = _evidence;
+        } else {
+            dispute.defendantEvidence = _evidence;
+        }
+    }
+
+
+    function getZeronDisputesByPlaintiff(address _plaintiff) external view returns (bytes32[] memory) {
+        return zeronDisputesByPlaintiff[_plaintiff];
+    }
+
+
+    function getZeronDisputesByDefendant(address _defendant) external view returns (bytes32[] memory) {
+        return zeronDisputesByDefendant[_defendant];
+    }
+
+
+    function getAllZeronDisputes() external view returns (bytes32[] memory) {
+        return allZeronDisputes;
     }
 
 

@@ -33,8 +33,7 @@ interface IZeronV1Payments {
         address employer,
         address employee,
         string task,
-        uint256 signedAt,
-        uint256 deadline
+        uint256 signedAt
     );
     event TaskSubmitted(
         address employer,
@@ -61,11 +60,14 @@ interface IZeronV1Payments {
 
     function deadline() external view returns (uint256);
 
-    function duration() external view returns (uint256);
-
     function employee() external view returns (address);
 
     function employer() external view returns (address);
+
+    function getAllProperties()
+        external
+        view
+        returns (ZeronV1Payments.PaymentDetails memory);
 
     function refund() external;
 
@@ -87,7 +89,7 @@ interface IZeronV1Payments {
 
     function status() external view returns (uint8);
 
-    function submitTask(string memory _task) external;
+    function submitTask() external;
 
     function submittedAt() external view returns (uint256);
 
@@ -96,4 +98,27 @@ interface IZeronV1Payments {
     function unLocked() external view returns (bool);
 
     function withdrawFund() external;
+}
+
+interface ZeronV1Payments {
+    struct PaymentDetails {
+        address router;
+        address arbitral;
+        address employer;
+        address employee;
+        address commissionToken;
+        uint256 amount;
+        uint256 fee;
+        uint256 deadline;
+        uint256 createdAt;
+        uint256 signedAt;
+        uint256 submittedAt;
+        uint256 completedAt;
+        uint256 rejectedAt;
+        uint256 cancelledAt;
+        bool unLocked;
+        string task;
+        bytes32 disputeId;
+        uint8 status;
+    }
 }

@@ -18,7 +18,6 @@ contract ZeronV1Payments {
     uint private fee;
     bool public unLocked;
     string public task;
-    uint public duration; 
     uint public deadline; 
     uint public createdAt; 
     uint public signedAt; 
@@ -26,16 +25,38 @@ contract ZeronV1Payments {
     uint public completedAt; 
     uint public rejectedAt; 
     uint public cancelledAt; 
+    bytes32 disputeId;
 
     PaymentStatus public status;
     IERC20 public immutable commissionToken;
+
+    struct PaymentDetails {
+        address router;
+        address arbitral;
+        address employer;
+        address employee;
+        address commissionToken;
+        uint amount;
+        uint fee;
+        uint deadline; 
+        uint createdAt; 
+        uint signedAt; 
+        uint submittedAt; 
+        uint completedAt; 
+        uint rejectedAt; 
+        uint cancelledAt; 
+        bool unLocked;
+        string task;
+        bytes32 disputeId;
+        PaymentStatus status;
+    }
 
     event DisputeResolved( address employee,uint256 amount ) ;
     event DisputeStarted( address employer,address employee,uint256 amount,bytes32 disputeId ) ;
     event TaskCancelled( address employer,address employee,uint256 amount,uint256 cancelledAt ) ;
     event TaskCompleted( address employer,address employee,uint256 amount,uint256 completedAt ) ;
     event TaskRejected( address employer,address employee,uint256 amount,uint256 rejectedAt ) ;
-    event TaskSigned( address employer,address employee,string task,uint256 signedAt,uint256 deadline ) ;
+    event TaskSigned( address employer,address employee,string task,uint256 signedAt) ;
     event TaskSubmitted( address employer,address employee,string task,uint256 submittedAt ) ;
 
 
@@ -45,7 +66,7 @@ contract ZeronV1Payments {
         address _employee,
         uint _amount,
         string memory _task,
-        uint _duration,
+        uint _deadline,
         address _commissionToken,
         uint _fee
     ) {
@@ -53,7 +74,7 @@ contract ZeronV1Payments {
         require(_employer != address(0), "Invalid employer address");
         require(_employee != address(0), "Invalid employee address");
         require(_amount > 0, "Commission should be greater than 0");
-        require(_duration > 0, "Duration should be greater than 0");
+        require(_deadline > block.timestamp, "Deadline should be greater than createdAt");
         router = msg.sender;
         arbitral = _arbitral;
         employer = _employer;
@@ -61,8 +82,7 @@ contract ZeronV1Payments {
         amount = _amount;
         task = _task;
         createdAt = block.timestamp;
-        duration = _duration;
-        deadline = createdAt + _duration;
+        deadline = _deadline;
         commissionTokenAddr = _commissionToken;
         commissionToken = IERC20(_commissionToken);
         fee = _fee;
@@ -106,15 +126,13 @@ contract ZeronV1Payments {
 
         status = PaymentStatus.InProgress;
         signedAt = block.timestamp;
-        deadline = signedAt + duration;
-        emit TaskSigned(employer, employee, task, signedAt, deadline);
+        emit TaskSigned(employer, employee, task, signedAt);
     }
 
 
-    function submitTask(string memory _task) external unLock onlyEmployee {
+    function submitTask() external unLock onlyEmployee {
         require(status == PaymentStatus.InProgress, "Task cannot be submitted");
 
-        task = _task;
         status = PaymentStatus.Submitted;
         submittedAt = block.timestamp;
         emit TaskSubmitted(employer, employee, task, submittedAt);
@@ -142,7 +160,7 @@ contract ZeronV1Payments {
 
 
     function refund() external unLock onlyEmployer {
-        require(status == PaymentStatus.Created || status == PaymentStatus.InProgress && block.timestamp > deadline + 14 days, "Cannot withdraw now");
+        require(status == PaymentStatus.Created || status == PaymentStatus.InProgress && block.timestamp > deadline + 14 days || status == PaymentStatus.Rejected && block.timestamp > rejectedAt + 60 days, "Cannot refund now");
 
         commissionToken.transfer(employer, amount * (100 - fee) / 100);
         commissionToken.transfer(router, amount * fee / 100);
@@ -167,7 +185,7 @@ contract ZeronV1Payments {
         require(status == PaymentStatus.Rejected, "Task can not be disputed");
 
         status = PaymentStatus.Disputed;
-        bytes32 disputeId = IZeronV1Arbitral(arbitral).startDispute(employer, employee, commissionTokenAddr, amount, fee);
+        disputeId = IZeronV1Arbitral(arbitral).startDispute(employer, employee, commissionTokenAddr, amount, fee);
         emit DisputeStarted(employer, employee, amount, disputeId);
     }
 
@@ -180,6 +198,32 @@ contract ZeronV1Payments {
         commissionToken.transfer(_recipient, amount - amount * fee / 100);
         emit DisputeResolved(_recipient, amount);
         completedAt = block.timestamp;
+    }
+
+
+    function getAllProperties() external view returns (PaymentDetails memory) {
+        PaymentDetails memory details;
+
+        details.router = router;
+        details.arbitral = arbitral;
+        details.employer = employer;
+        details.employee = employee;
+        details.commissionToken = commissionTokenAddr;
+        details.amount = amount;
+        details.fee = fee;
+        details.deadline = deadline; 
+        details.createdAt = createdAt; 
+        details.signedAt = signedAt; 
+        details.submittedAt = submittedAt; 
+        details.completedAt = completedAt; 
+        details.rejectedAt = rejectedAt; 
+        details.cancelledAt =cancelledAt; 
+        details.unLocked = unLocked;
+        details.task = task;
+        details.disputeId = disputeId;
+        details.status = status;
+
+        return details;
     }
 
 
