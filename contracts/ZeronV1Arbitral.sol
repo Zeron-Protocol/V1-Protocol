@@ -114,6 +114,21 @@ contract ZeronV1Arbitral {
     }
 
 
+    modifier onlyEOA() {
+        require(isEOA(msg.sender), "Only EOA accounts are allowed");
+        _;
+    }
+
+
+    function isEOA(address account) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(account)
+        }
+        return size == 0;
+    }
+
+
     function addPayments(address _paymentAddr) external onlyRouter {
         zeronPayments[_paymentAddr] = true;
         emit WitnessStaked(msg.sender);
@@ -139,8 +154,8 @@ contract ZeronV1Arbitral {
     }
 
 
-    function becomeWitness(uint stakingAmount) external unLock {
-        require(stakingAmount > minStake, "The staked amount is insufficient");
+    function becomeWitness(uint stakingAmount) external onlyEOA unLock {
+        require(stakingAmount >= minStake, "The staked amount is insufficient");
         require(!witnesses[msg.sender].isWitness, "You are already a witness");
         require(IERC20(zntToken).transferFrom(msg.sender, address(this), stakingAmount), "Insufficient ZNT balance or approval");
 
@@ -157,7 +172,7 @@ contract ZeronV1Arbitral {
     }
 
 
-    function resignWitness() external unLock onlyWitness {
+    function resignWitness() external onlyEOA unLock onlyWitness {
         uint256 stakingRewards = calculateStakingRewards(msg.sender);
         require(IERC20(zntToken).transfer(msg.sender, witnesses[msg.sender].stakingAmount + stakingRewards), "Failed to transfer ZNT");
 
@@ -173,27 +188,23 @@ contract ZeronV1Arbitral {
         require(_amount > 0, "Amount must be greater than zero");
         
         disputeId = keccak256(abi.encodePacked(_plaintiff, _defendant, _amount, block.timestamp));
-        Dispute memory dispute = disputes[disputeId];
-        dispute = Dispute(
-            {
-                plaintiff: _plaintiff,
-                defendant: _defendant,
-                plaintiffEvidence: '',
-                defendantEvidence: '',
-                commisionTokenAddr: _commisionTokenAddr,
-                zeronPaymentAddr: msg.sender,
-                attWit: new address[](0),
-                disputeCreatedAt: block.timestamp,
-                amount: _amount,
-                fee: _fee,
-                numberOfVotes: 0,
-                status: DisputeStatus.InProgress,
-                voteCounter: VoteCounter({
-                    inSupport: 0,
-                    inOpposition: 0
-                })
-            }
-        );
+        Dispute storage dispute = disputes[disputeId];
+
+        dispute.plaintiff = _plaintiff;
+        dispute.defendant = _defendant;
+        dispute.plaintiffEvidence = '';
+        dispute.defendantEvidence = '';
+        dispute.commisionTokenAddr = _commisionTokenAddr;
+        dispute.zeronPaymentAddr = msg.sender;
+        dispute.attWit = new address[](0);
+        dispute.disputeCreatedAt = block.timestamp;
+        dispute.amount = _amount;
+        dispute.fee = _fee;
+        dispute.numberOfVotes = 0;
+        dispute.status = DisputeStatus.InProgress;
+        dispute.voteCounter.inSupport = 0;
+        dispute.voteCounter.inOpposition = 0;
+
         allZeronDisputes.push(disputeId);
         zeronDisputesByPlaintiff[_plaintiff].push(disputeId);
         zeronDisputesByDefendant[_defendant].push(disputeId);

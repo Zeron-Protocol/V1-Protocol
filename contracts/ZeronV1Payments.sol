@@ -52,7 +52,7 @@ contract ZeronV1Payments {
     }
 
     event DisputeResolved( address employee,uint256 amount ) ;
-    event DisputeStarted( address employer,address employee,uint256 amount,bytes32 disputeId ) ;
+    event DisputeStarted( address employee,address employer,uint256 amount,bytes32 disputeId ) ;
     event TaskCancelled( address employer,address employee,uint256 amount,uint256 cancelledAt ) ;
     event TaskCompleted( address employer,address employee,uint256 amount,uint256 completedAt ) ;
     event TaskRejected( address employer,address employee,uint256 amount,uint256 rejectedAt ) ;
@@ -185,8 +185,8 @@ contract ZeronV1Payments {
         require(status == PaymentStatus.Rejected, "Task can not be disputed");
 
         status = PaymentStatus.Disputed;
-        disputeId = IZeronV1Arbitral(arbitral).startDispute(employer, employee, commissionTokenAddr, amount, fee);
-        emit DisputeStarted(employer, employee, amount, disputeId);
+        disputeId = IZeronV1Arbitral(arbitral).startDispute(employee, employer, commissionTokenAddr, amount, fee);
+        emit DisputeStarted(employee, employer, amount, disputeId);
     }
 
 

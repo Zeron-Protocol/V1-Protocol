@@ -6,8 +6,8 @@ pragma experimental ABIEncoderV2;
 interface IZeronV1Payments {
     event DisputeResolved(address employee, uint256 amount);
     event DisputeStarted(
-        address employer,
         address employee,
+        address employer,
         uint256 amount,
         bytes32 disputeId
     );
